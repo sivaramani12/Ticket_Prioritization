@@ -66,7 +66,6 @@ if page == "Predict Ticket Priority":
                 fig = go.Figure(go.Indicator(
                     mode="gauge",
                     value=needle_value,
-                    #number={'prefix': f"{top_class}"},
                     title={'text': f"Predicted Priority: {top_class}", 'font': {'size': 24}},
                     gauge={
                         'axis': {'range': [0, 100], 'tickvals': [0, 50, 100], 'ticktext': ['P1', 'P2', 'P3']},
