@@ -78,13 +78,24 @@ if page == "Predict Ticket Priority":
                     },
                     domain={'x': [0, 1], 'y': [0, 1]}
                 ))
-                fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), height=400)
+                fig.update_layout(
+                    margin=dict(l=20, r=20, t=40, b=20), 
+                    height=400, 
+                    annotations=[  
+                        dict(
+                            x=0.5,
+                            y=0.25,
+                            text=f"<b>{top_class}</b>",
+                            showarrow=False,
+                            font=dict(size=36, color="gray")
+                        )
+                    ])
                 st.plotly_chart(fig, use_container_width=True)
 
             new_id = int(history_df["ID"].max()) + 1 if not history_df.empty else 1
             new_record = pd.DataFrame([[
                 new_id,
-                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                (datetime.utcnow() + pd.Timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d %H:%M"),
                 ticket_type,
                 ticket_queue,
                 ticket_subject,
