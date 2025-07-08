@@ -1,3 +1,7 @@
 streamlit
-pandas
 scikit-learn
+pandas
+matplotlib
+plotly
+joblib
+imbalanced-learn
