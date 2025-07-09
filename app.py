@@ -5,6 +5,14 @@ import os
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import re
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+
+nltk.download('stopwords')
+nltk.download('wordnet')
+nltk.download('omw-1.4')
 
 model = joblib.load("src/ticket_priority_model.pkl")
 vectorizer = joblib.load("src/tfidf_vectorizer.pkl")
@@ -15,16 +23,21 @@ COLUMNS = ["ID", "Date", "Type", "Queue", "Subject", "Description", "Predicted P
 
 if os.path.exists(HISTORY_FILE):
     history_df = pd.read_csv(HISTORY_FILE)
-    if "Confidence" in history_df.columns:
-        history_df.drop(columns=["Confidence"], inplace=True)
-        history_df.to_csv(HISTORY_FILE, index=False)
 else:
     history_df = pd.DataFrame(columns=COLUMNS)
 
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r'[^a-zA-Z0-9\s]', ' ', text)  # remove special characters
+    tokens = text.split()
+    stop_words = set(stopwords.words('english'))
+    tokens = [word for word in tokens if word not in stop_words]
+    lemmatizer = WordNetLemmatizer()
+    tokens = [lemmatizer.lemmatize(word) for word in tokens]
+    return ' '.join(tokens)
 
 st.set_page_config(page_title="Smart Ticket Prioritizer", layout="wide")
 page = st.sidebar.radio("Select Page", ["Predict Ticket Priority", "Analytics Dashboard"])
-
 
 if page == "Predict Ticket Priority":
     st.title("Smart Ticket Prioritization System")
@@ -44,13 +57,15 @@ if page == "Predict Ticket Priority":
             st.warning("Please complete all fields.")
         else:
             combined_input = (
-                ticket_type.lower() + "+" +
-                ticket_queue.lower() + "+" +
-                ticket_subject.lower() + "+" +
-                ticket_description.lower()
+                ticket_type + " " +
+                ticket_queue + " " +
+                ticket_subject + " " +
+                ticket_description
             )
 
-            X_input = vectorizer.transform([combined_input])
+            cleaned_input = clean_text(combined_input)
+
+            X_input = vectorizer.transform([cleaned_input])
             proba = model.predict_proba(X_input)[0]
             top_class = label_encoder.inverse_transform([proba.argmax()])[0]
 
@@ -76,17 +91,16 @@ if page == "Predict Ticket Priority":
                             {'range': [66, 100], 'color': "#90BE6D"},
                         ]
                     },
-                    domain={'x': [0, 1], 'y': [0, 1]}
+                    domain={'x': [0, 1], 'y': [0, 1]},
+                    # add visible text in gauge
+                    number={'valueformat': "", 'font': {'size': 1}}  
                 ))
                 fig.update_layout(
-                    margin=dict(l=20, r=20, t=40, b=20), 
-                    height=400, 
-                    annotations=[  
+                    margin=dict(l=20, r=20, t=40, b=20),
+                    height=400,
+                    annotations=[
                         dict(
-                            x=0.5,
-                            y=0.25,
-                            text=f"<b>{top_class}</b>",
-                            showarrow=False,
+                            x=0.5, y=0.25, text=f"<b>{top_class}</b>", showarrow=False,
                             font=dict(size=36, color="gray")
                         )
                     ])
@@ -109,7 +123,6 @@ if page == "Predict Ticket Priority":
     if not history_df.empty:
         st.markdown("### Recent Ticket Predictions")
         st.dataframe(history_df.tail(10)[::-1], use_container_width=True)
-
 
 elif page == "Analytics Dashboard":
     st.title("Ticket Analytics Dashboard")
